@@ -135,6 +135,9 @@ if scenario == "Q1: Топ контактов":
             default=['active', 'cooling', 'cold']
         )
     
+    # Debug info
+    st.info(f"🔄 Параметры: Год={year}, Топ={top_n}, Status={', '.join(status_filter)}")
+    
     if not status_filter:
         st.info("ℹ️ Выберите хотя бы один status")
         st.stop()
@@ -199,6 +202,9 @@ elif scenario == "Q2: Остывшие контакты":
     years_threshold = st.slider("Порог (лет без контакта):", 1, 5, 2)
     threshold_date = (datetime.now() - timedelta(days=years_threshold*365)).strftime("%Y-%m-%d")
     
+    # Debug info to show reactivity
+    st.info(f"🔄 Текущее значение порога: **{years_threshold} лет** → дата отсечки: {threshold_date}")
+    
     if db_type == 'postgresql':
         query = """
             SELECT 
@@ -261,6 +267,9 @@ elif scenario == "Q5: Самые связанные":
             ['active', 'cooling', 'cold', 'directory'],
             default=['active', 'directory']
         )
+    
+    # Debug info
+    st.info(f"🔄 Параметры: Топ={top_n}, Status={', '.join(status_filter)}")
     
     if not status_filter:
         st.info("ℹ️ Выберите хотя бы один status")
