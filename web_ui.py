@@ -199,21 +199,38 @@ elif scenario == "Q2: Остывшие контакты":
     years_threshold = st.slider("Порог (лет без контакта):", 1, 5, 2)
     threshold_date = (datetime.now() - timedelta(days=years_threshold*365)).strftime("%Y-%m-%d")
     
-    query = """
-        SELECT 
-            e.label,
-            e.status,
-            e.relationship_strength,
-            e.last_interaction,
-            e.tags
-        FROM entities e
-        WHERE 
-            e.type = 'Person'
-            AND e.last_interaction IS NOT NULL
-            AND e.last_interaction < %s
-        ORDER BY e.last_interaction DESC
-        LIMIT 50
-    """
+    if db_type == 'postgresql':
+        query = """
+            SELECT 
+                e.label,
+                e.status,
+                e.relationship_strength,
+                e.last_interaction,
+                e.tags
+            FROM entities e
+            WHERE 
+                e.type = 'Person'
+                AND e.last_interaction IS NOT NULL
+                AND e.last_interaction < %s
+            ORDER BY e.last_interaction DESC
+            LIMIT 50
+        """
+    else:  # sqlite
+        query = """
+            SELECT 
+                e.label,
+                e.status,
+                e.relationship_strength,
+                e.last_interaction,
+                e.tags
+            FROM entities e
+            WHERE 
+                e.type = 'Person'
+                AND e.last_interaction IS NOT NULL
+                AND e.last_interaction < ?
+            ORDER BY e.last_interaction DESC
+            LIMIT 50
+        """
     
     results = execute_query(query, (threshold_date,))
     
@@ -315,7 +332,11 @@ elif scenario == "Q11: Кого представить?":
     
     if st.button("Найти рекомендации"):
         # Find target entity_id
-        results = execute_query("SELECT entity_id FROM entities WHERE label = %s", (target_contact,))
+        if db_type == 'postgresql':
+            results = execute_query("SELECT entity_id FROM entities WHERE label = %s", (target_contact,))
+        else:
+            results = execute_query("SELECT entity_id FROM entities WHERE label = ?", (target_contact,))
+        
         if not results:
             st.error("Контакт не найден")
             st.stop()
@@ -335,47 +356,81 @@ elif scenario == "Q11: Кого представить?":
         olga_id = results[0][0]
         
         # Find recommendations
-        query = """
-            WITH target_connections AS (
+        if db_type == 'postgresql':
+            query = """
+                WITH target_connections AS (
+                    SELECT DISTINCT
+                        CASE 
+                            WHEN subject_id = %s THEN object_id
+                            ELSE subject_id
+                        END as connection_id
+                    FROM edges
+                    WHERE (subject_id = %s OR object_id = %s)
+                    AND relation_type = 'co_attended'
+                ),
+                olga_connections AS (
+                    SELECT DISTINCT
+                        CASE 
+                            WHEN subject_id = %s THEN object_id
+                            ELSE subject_id
+                        END as connection_id
+                    FROM edges
+                    WHERE (subject_id = %s OR object_id = %s)
+                    AND relation_type = 'co_attended'
+                )
+                SELECT 
+                    e.label,
+                    e.relationship_strength,
+                    e.status
+                FROM olga_connections oc
+                LEFT JOIN target_connections tc ON oc.connection_id = tc.connection_id
+                JOIN entities e ON e.entity_id = oc.connection_id
+                WHERE 
+                    tc.connection_id IS NULL
+                    AND e.type = 'Person'
+                    AND e.entity_id != %s
+                ORDER BY e.relationship_strength DESC
+                LIMIT 10
+            """
+            results = execute_query(query, (
+                target_id, target_id, target_id,
+                olga_id, olga_id, olga_id,
+                target_id
+            ))
+        else:  # sqlite
+            # Simplified query for SQLite without CTEs
+            query = """
                 SELECT DISTINCT
-                    CASE 
-                        WHEN subject_id = %s THEN object_id
-                        ELSE subject_id
-                    END as connection_id
-                FROM edges
-                WHERE (subject_id = %s OR object_id = %s)
-                AND relation_type = 'co_attended'
-            ),
-            olga_connections AS (
-                SELECT DISTINCT
-                    CASE 
-                        WHEN subject_id = %s THEN object_id
-                        ELSE subject_id
-                    END as connection_id
-                FROM edges
-                WHERE (subject_id = %s OR object_id = %s)
-                AND relation_type = 'co_attended'
-            )
-            SELECT 
-                e.label,
-                e.relationship_strength,
-                e.status
-            FROM olga_connections oc
-            LEFT JOIN target_connections tc ON oc.connection_id = tc.connection_id
-            JOIN entities e ON e.entity_id = oc.connection_id
-            WHERE 
-                tc.connection_id IS NULL
-                AND e.type = 'Person'
-                AND e.entity_id != %s
-            ORDER BY e.relationship_strength DESC
-            LIMIT 10
-        """
-        
-        results = execute_query(query, (
-            target_id, target_id, target_id,
-            olga_id, olga_id, olga_id,
-            target_id
-        ))
+                    e.label,
+                    e.relationship_strength,
+                    e.status
+                FROM edges e1
+                JOIN entities e ON (
+                    (e1.subject_id = e.entity_id OR e1.object_id = e.entity_id)
+                    AND e.type = 'Person'
+                )
+                WHERE 
+                    (e1.subject_id = ? OR e1.object_id = ?)
+                    AND e1.relation_type = 'co_attended'
+                    AND e.entity_id NOT IN (
+                        SELECT DISTINCT
+                            CASE 
+                                WHEN e2.subject_id = ? THEN e2.object_id
+                                ELSE e2.subject_id
+                            END
+                        FROM edges e2
+                        WHERE (e2.subject_id = ? OR e2.object_id = ?)
+                        AND e2.relation_type = 'co_attended'
+                    )
+                    AND e.entity_id != ?
+                ORDER BY e.relationship_strength DESC
+                LIMIT 10
+            """
+            results = execute_query(query, (
+                olga_id, olga_id,
+                target_id, target_id, target_id,
+                target_id
+            ))
         
         if results:
             st.success(f"**Рекомендации для {target_contact}:**")
@@ -407,10 +462,16 @@ elif scenario == "Обогащение: Tags & Notes":
     selected_contact = st.selectbox("Выберите контакт:", contacts)
     
     # Get current data
-    results = execute_query("""
-        SELECT tags, notes, status, relationship_strength
-        FROM entities WHERE label = %s
-    """, (selected_contact,))
+    if db_type == 'postgresql':
+        results = execute_query("""
+            SELECT tags, notes, status, relationship_strength
+            FROM entities WHERE label = %s
+        """, (selected_contact,))
+    else:
+        results = execute_query("""
+            SELECT tags, notes, status, relationship_strength
+            FROM entities WHERE label = ?
+        """, (selected_contact,))
     
     if results:
         current_tags, current_notes, status, strength = results[0]
@@ -425,11 +486,18 @@ elif scenario == "Обогащение: Tags & Notes":
         new_notes = st.text_area("Notes:", value=current_notes or "", height=150)
         
         if st.button("💾 Сохранить"):
-            execute_query("""
-                UPDATE entities 
-                SET tags = %s, notes = %s, updated_at = %s
-                WHERE label = %s
-            """, (new_tags, new_notes, datetime.now().isoformat(), selected_contact))
+            if db_type == 'postgresql':
+                execute_query("""
+                    UPDATE entities 
+                    SET tags = %s, notes = %s, updated_at = %s
+                    WHERE label = %s
+                """, (new_tags, new_notes, datetime.now().isoformat(), selected_contact))
+            else:
+                execute_query("""
+                    UPDATE entities 
+                    SET tags = ?, notes = ?, updated_at = ?
+                    WHERE label = ?
+                """, (new_tags, new_notes, datetime.now().isoformat(), selected_contact))
             st.success(f"✅ Обновлено: {selected_contact}")
     else:
         st.error(f"❌ Контакт '{selected_contact}' не найден")
