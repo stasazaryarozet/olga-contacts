@@ -1,7 +1,7 @@
 venv/
-data/contacts_v2.db
-data/*.db
-*.db
+# data/contacts_v2.db is included for Streamlit Cloud deployment
+# data/*.db
+# *.db
 __pycache__/
 *.pyc
 .DS_Store
