@@ -1,0 +1,17 @@
+# Seed URLs - Локальные файлы из проекта
+# Используем file:// URLs для локальных HTML/текстовых файлов
+
+# Curators factsheet (текстовый файл)
+file:///Users/azaryarozet/Library/Mobile Documents/com~apple~CloudDocs/Дела/Ольга/Дизайн-путешествия/PARIS-2026/program/route/curators/CURATORS_FACTSHEET.md
+
+# Project knowledge (основная информация о проекте и кураторах)
+file:///Users/azaryarozet/Library/Mobile Documents/com~apple~CloudDocs/Дела/Ольга/Дизайн-путешествия/PARIS-2026/PROJECT_KNOWLEDGE_v2.4.md
+
+# Landing page HTML (есть информация о кураторах)
+file:///Users/azaryarozet/Library/Mobile Documents/com~apple~CloudDocs/Дела/Ольга/Дизайн-путешествия/PARIS-2026/index.html
+
+# Транскрипт аудио (философия программы от Ольги)
+file:///Users/azaryarozet/Library/Mobile Documents/com~apple~CloudDocs/Дела/Ольга/Дизайн-путешествия/PARIS-2026/source_materials/2025-10_olga_transcript_program_philosophy_recording_14.txt
+
+# Website content (детальное описание проекта и кураторов)
+file:///Users/azaryarozet/Library/Mobile Documents/com~apple~CloudDocs/Дела/Ольга/Дизайн-путешествия/PARIS-2026/campaign/landing/src/content/WEBSITE_CONTENT.md

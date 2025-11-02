@@ -1,0 +1,11 @@
+data/contacts_v2.db
+data/*.db
+*.db
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+.env
+.streamlit/secrets.toml
+import.log
+migration_data.sql
