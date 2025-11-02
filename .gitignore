@@ -10,3 +10,4 @@ __pycache__/
 .streamlit/secrets.toml
 import.log
 migration_data.sql
+.supabase_credentials
