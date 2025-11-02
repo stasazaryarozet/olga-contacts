@@ -61,13 +61,13 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("**Статистика:**")
 
 # Stats
-cursor = db.conn.execute("SELECT COUNT(*) FROM entities WHERE type='Person'")
+cursor = db.execute("SELECT COUNT(*) FROM entities WHERE type='Person'")
 total_contacts = cursor.fetchone()[0]
 
-cursor = db.conn.execute("SELECT COUNT(*) FROM edges")
+cursor = db.execute("SELECT COUNT(*) FROM edges")
 total_edges = cursor.fetchone()[0]
 
-cursor = db.conn.execute("SELECT status, COUNT(*) FROM entities GROUP BY status")
+cursor = db.execute("SELECT status, COUNT(*) FROM entities GROUP BY status")
 status_dist = dict(cursor.fetchall())
 
 st.sidebar.metric("Всего контактов", total_contacts)
@@ -89,7 +89,7 @@ if scenario == "Q1: Топ контактов":
         col1, col2, col3 = st.columns(3)
         
         # Get available years from data
-        cursor = db.conn.execute("""
+        cursor = db.execute("""
             SELECT DISTINCT substr(event_date, 1, 4) as year 
             FROM edges 
             WHERE event_date IS NOT NULL 
@@ -138,7 +138,7 @@ if scenario == "Q1: Топ контактов":
             LIMIT ?
         """
         
-        cursor = db.conn.execute(query, (f"{year}%", *status_filter, top_n))
+        cursor = db.execute(query, (f"{year}%", *status_filter, top_n))
         results = cursor.fetchall()
         
         if results:
@@ -182,7 +182,7 @@ elif scenario == "Q2: Остывшие контакты":
             LIMIT 50
         """
         
-        cursor = db.conn.execute(query, (threshold_date,))
+        cursor = db.execute(query, (threshold_date,))
         results = cursor.fetchall()
         
         if results:
@@ -240,7 +240,7 @@ elif scenario == "Q5: Самые связанные":
             LIMIT ?
         """
         
-        cursor = db.conn.execute(query, (*status_filter, top_n))
+        cursor = db.execute(query, (*status_filter, top_n))
         results = cursor.fetchall()
         
         if results:
@@ -266,7 +266,7 @@ elif scenario == "Q11: Кого представить?":
     
     try:
         # Get all active/cooling contacts
-        cursor = db.conn.execute("""
+        cursor = db.execute("""
             SELECT label FROM entities 
             WHERE type='Person' AND status IN ('active', 'cooling', 'directory')
             ORDER BY label
@@ -277,13 +277,13 @@ elif scenario == "Q11: Кого представить?":
         
         if st.button("Найти рекомендации"):
             # Find entity_id
-            cursor = db.conn.execute("""
+            cursor = db.execute("""
                 SELECT entity_id FROM entities WHERE label = ?
             """, (target_contact,))
             target_id = cursor.fetchone()[0]
             
             # Find common neighbors with Olga
-            cursor = db.conn.execute("""
+            cursor = db.execute("""
                 SELECT entity_id FROM identifiers 
                 WHERE identifier LIKE '%olga%' OR identifier LIKE '%rozet%'
                 LIMIT 1
@@ -330,7 +330,7 @@ elif scenario == "Q11: Кого представить?":
                     LIMIT 10
                 """
                 
-                cursor = db.conn.execute(query, (
+                cursor = db.execute(query, (
                     target_id, target_id, target_id,
                     olga_id, olga_id, olga_id,
                     target_id
@@ -360,7 +360,7 @@ elif scenario == "Обогащение: Tags & Notes":
     
     try:
         # Get all contacts
-        cursor = db.conn.execute("""
+        cursor = db.execute("""
             SELECT label FROM entities 
             WHERE type='Person'
             ORDER BY label
@@ -374,7 +374,7 @@ elif scenario == "Обогащение: Tags & Notes":
         selected_contact = st.selectbox("Выберите контакт:", contacts)
         
         # Get current data
-        cursor = db.conn.execute("""
+        cursor = db.execute("""
             SELECT tags, notes, status, relationship_strength
             FROM entities WHERE label = ?
         """, (selected_contact,))
@@ -393,7 +393,7 @@ elif scenario == "Обогащение: Tags & Notes":
             new_notes = st.text_area("Notes:", value=current_notes or "", height=150)
             
             if st.button("💾 Сохранить"):
-                db.conn.execute("""
+                db.execute("""
                     UPDATE entities 
                     SET tags = ?, notes = ?, updated_at = ?
                     WHERE label = ?
