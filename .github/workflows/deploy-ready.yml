@@ -1,0 +1,19 @@
+name: Deploy URL Ready
+on:
+  push:
+    branches: [ main ]
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Show deploy instructions
+        run: |
+          echo "✅ App ready to deploy!"
+          echo ""
+          echo "📍 Deploy URL: https://share.streamlit.io/"
+          echo "📁 Repository: stasazaryarozet/olga-contacts"
+          echo "📄 Main file: web_ui.py"
+          echo ""
+          echo "Instructions in DEPLOY_NOW.md"
+
