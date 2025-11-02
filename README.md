@@ -1,9 +1,22 @@
 # Проект "Контакты": Автономная система построения социального графа
 
-**Статус:** ✅ ПЛАТФОРМА (Platform Complete)  
-**Дата:** 2025-11-01  
+**Статус:** ✅ ГОТОВ К ДЕПЛОЮ (Ready to Deploy)  
+**Дата:** 2025-11-03  
 **Результат:** 464 entities (канонические), 5,050 edges, $0 budget  
-**Версия:** v2.0 (Enhanced Platform with Entity Resolution)
+**Версия:** v2.1 (Web UI Ready for Production)
+
+---
+
+## 🚀 БЫСТРЫЙ ЗАПУСК (ONE-CLICK DEPLOY)
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/stasazaryarozet/olga-contacts/main/web_ui.py)
+
+**Или вручную:**
+1. Перейти на [Streamlit Cloud](https://share.streamlit.io/)
+2. Sign in with GitHub
+3. New app → Repository: `stasazaryarozet/olga-contacts`
+4. Main file: `web_ui.py`
+5. Deploy!
 
 ---
 
