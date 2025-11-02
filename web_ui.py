@@ -264,89 +264,90 @@ elif scenario == "Q11: Кого представить?":
     
     st.markdown("*Рекомендация на основе общих связей*")
     
-    # Get all active/cooling contacts
-    cursor = db.conn.execute("""
-        SELECT label FROM entities 
-        WHERE type='Person' AND status IN ('active', 'cooling', 'directory')
-        ORDER BY label
-    """)
-    contacts = [row[0] for row in cursor.fetchall()]
-    
-    target_contact = st.selectbox("Выберите контакт:", contacts)
-    
-    if st.button("Найти рекомендации"):
-        # Find entity_id
+    try:
+        # Get all active/cooling contacts
         cursor = db.conn.execute("""
-            SELECT entity_id FROM entities WHERE label = ?
-        """, (target_contact,))
-        target_id = cursor.fetchone()[0]
-        
-        # Find common neighbors with Olga
-        cursor = db.conn.execute("""
-            SELECT entity_id FROM identifiers 
-            WHERE identifier LIKE '%olga%' OR identifier LIKE '%rozet%'
-            LIMIT 1
+            SELECT label FROM entities 
+            WHERE type='Person' AND status IN ('active', 'cooling', 'directory')
+            ORDER BY label
         """)
-        olga_result = cursor.fetchone()
+        contacts = [row[0] for row in cursor.fetchall()]
         
-        if olga_result:
-            olga_id = olga_result[0]
+        target_contact = st.selectbox("Выберите контакт:", contacts)
+        
+        if st.button("Найти рекомендации"):
+            # Find entity_id
+            cursor = db.conn.execute("""
+                SELECT entity_id FROM entities WHERE label = ?
+            """, (target_contact,))
+            target_id = cursor.fetchone()[0]
             
-            # Common neighbors query
-            query = """
-                WITH target_connections AS (
-                    SELECT DISTINCT
-                        CASE 
-                            WHEN subject_id = ? THEN object_id
-                            ELSE subject_id
-                        END as connection_id
-                    FROM edges
-                    WHERE (subject_id = ? OR object_id = ?)
-                    AND relation_type = 'co_attended'
-                ),
-                olga_connections AS (
-                    SELECT DISTINCT
-                        CASE 
-                            WHEN subject_id = ? THEN object_id
-                            ELSE subject_id
-                        END as connection_id
-                    FROM edges
-                    WHERE (subject_id = ? OR object_id = ?)
-                    AND relation_type = 'co_attended'
-                )
-                SELECT 
-                    e.label,
-                    e.relationship_strength,
-                    e.status
-                FROM olga_connections oc
-                LEFT JOIN target_connections tc ON oc.connection_id = tc.connection_id
-                JOIN entities e ON e.entity_id = oc.connection_id
-                WHERE 
-                    tc.connection_id IS NULL
-                    AND e.type = 'Person'
-                    AND e.entity_id != ?
-                ORDER BY e.relationship_strength DESC
-                LIMIT 10
-            """
+            # Find common neighbors with Olga
+            cursor = db.conn.execute("""
+                SELECT entity_id FROM identifiers 
+                WHERE identifier LIKE '%olga%' OR identifier LIKE '%rozet%'
+                LIMIT 1
+            """)
+            olga_result = cursor.fetchone()
             
-            cursor = db.conn.execute(query, (
-                target_id, target_id, target_id,
-                olga_id, olga_id, olga_id,
-                target_id
-            ))
-            
-            results = cursor.fetchall()
-            
-            if results:
-                st.success(f"**Рекомендации для {target_contact}:**")
+            if olga_result:
+                olga_id = olga_result[0]
                 
-                for i, (label, strength, status) in enumerate(results, 1):
-                    col1, col2, col3 = st.columns([3, 1, 1])
-                    col1.write(f"**{i}. {label}**")
-                    col2.metric("Strength", f"{strength:.3f}")
-                    col3.write(status)
-            else:
-                st.info(f"{target_contact} уже знает всех ваших контактов!")
+                # Common neighbors query
+                query = """
+                    WITH target_connections AS (
+                        SELECT DISTINCT
+                            CASE 
+                                WHEN subject_id = ? THEN object_id
+                                ELSE subject_id
+                            END as connection_id
+                        FROM edges
+                        WHERE (subject_id = ? OR object_id = ?)
+                        AND relation_type = 'co_attended'
+                    ),
+                    olga_connections AS (
+                        SELECT DISTINCT
+                            CASE 
+                                WHEN subject_id = ? THEN object_id
+                                ELSE subject_id
+                            END as connection_id
+                        FROM edges
+                        WHERE (subject_id = ? OR object_id = ?)
+                        AND relation_type = 'co_attended'
+                    )
+                    SELECT 
+                        e.label,
+                        e.relationship_strength,
+                        e.status
+                    FROM olga_connections oc
+                    LEFT JOIN target_connections tc ON oc.connection_id = tc.connection_id
+                    JOIN entities e ON e.entity_id = oc.connection_id
+                    WHERE 
+                        tc.connection_id IS NULL
+                        AND e.type = 'Person'
+                        AND e.entity_id != ?
+                    ORDER BY e.relationship_strength DESC
+                    LIMIT 10
+                """
+                
+                cursor = db.conn.execute(query, (
+                    target_id, target_id, target_id,
+                    olga_id, olga_id, olga_id,
+                    target_id
+                ))
+                
+                results = cursor.fetchall()
+                
+                if results:
+                    st.success(f"**Рекомендации для {target_contact}:**")
+                    
+                    for i, (label, strength, status) in enumerate(results, 1):
+                        col1, col2, col3 = st.columns([3, 1, 1])
+                        col1.write(f"**{i}. {label}**")
+                        col2.metric("Strength", f"{strength:.3f}")
+                        col3.write(status)
+                else:
+                    st.info(f"{target_contact} уже знает всех ваших контактов!")
     
     except Exception as e:
         st.error(f"❌ Ошибка при загрузке данных: {str(e)}")
